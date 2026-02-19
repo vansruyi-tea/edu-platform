@@ -1,15 +1,21 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
 
 export default function SignupPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -19,8 +25,69 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // 这里会添加注册逻辑
-    console.log('注册数据:', formData)
+    setLoading(true)
+    setError('')
+    setSuccess('')
+
+    // 验证密码
+    if (formData.password !== formData.confirmPassword) {
+      setError('两次输入的密码不一致')
+      setLoading(false)
+      return
+    }
+
+    if (formData.password.length < 8) {
+      setError('密码至少需要8个字符')
+      setLoading(false)
+      return
+    }
+
+    try {
+      // 1. 注册用户
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            name: formData.name,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+
+      if (authError) throw authError
+
+      // 2. 创建用户资料（可选，如果需要额外信息）
+      if (authData.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: authData.user.id,
+              name: formData.name,
+              email: formData.email,
+              created_at: new Date().toISOString(),
+            },
+          ])
+
+        if (profileError) {
+          console.warn('创建用户资料失败:', profileError)
+          // 不阻止注册流程，只是记录警告
+        }
+      }
+
+      setSuccess('注册成功！请检查你的邮箱确认邮件。')
+      
+      // 3秒后跳转到登录页面
+      setTimeout(() => {
+        router.push('/login')
+      }, 3000)
+
+    } catch (error: any) {
+      setError(error.message || '注册失败，请稍后重试')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -43,6 +110,26 @@ export default function SignupPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* 错误提示 */}
+            {error && (
+              <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+                <div className="flex items-center">
+                  <AlertCircle className="mr-2 h-4 w-4" />
+                  {error}
+                </div>
+              </div>
+            )}
+
+            {/* 成功提示 */}
+            {success && (
+              <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-600">
+                <div className="flex items-center">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  {success}
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">姓名</Label>
@@ -120,8 +207,8 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full">
-                创建账户
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? '注册中...' : '创建账户'}
               </Button>
             </form>
 

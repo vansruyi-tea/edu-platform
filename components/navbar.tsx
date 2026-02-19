@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Menu, X, Home, BookOpen, Video, Users, MessageSquare, User } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { Menu, X, Home, BookOpen, Video, Users, MessageSquare, User, LogOut, Settings } from 'lucide-react'
 
 const navItems = [
   { name: '首页', href: '/', icon: Home },
@@ -14,7 +16,34 @@ const navItems = [
 ]
 
 export function Navbar() {
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // 检查用户登录状态
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setUser(session?.user || null)
+      setLoading(false)
+    }
+
+    checkUser()
+
+    // 监听认证状态变化
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/')
+    router.refresh()
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -48,12 +77,31 @@ export function Navbar() {
 
         {/* Auth Buttons */}
         <div className="hidden md:flex items-center space-x-2">
-          <Button variant="ghost" asChild>
-            <Link href="/login">登录</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/signup">免费注册</Link>
-          </Button>
+          {loading ? (
+            <div className="h-9 w-20 animate-pulse rounded-md bg-muted"></div>
+          ) : user ? (
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/profile">
+                  <User className="mr-2 h-4 w-4" />
+                  {user.email?.split('@')[0]}
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                退出
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Button variant="ghost" asChild>
+                <Link href="/login">登录</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/signup">免费注册</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -89,16 +137,45 @@ export function Navbar() {
               )
             })}
             <div className="pt-4 space-y-2">
-              <Button className="w-full" asChild>
-                <Link href="/signup" onClick={() => setIsOpen(false)}>
-                  免费注册
-                </Link>
-              </Button>
-              <Button variant="outline" className="w-full" asChild>
-                <Link href="/login" onClick={() => setIsOpen(false)}>
-                  登录
-                </Link>
-              </Button>
+              {loading ? (
+                <div className="space-y-2">
+                  <div className="h-10 w-full animate-pulse rounded-md bg-muted"></div>
+                  <div className="h-10 w-full animate-pulse rounded-md bg-muted"></div>
+                </div>
+              ) : user ? (
+                <div className="space-y-2">
+                  <div className="rounded-md bg-accent px-3 py-2 text-sm">
+                    <div className="flex items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      {user.email}
+                    </div>
+                  </div>
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/profile" onClick={() => setIsOpen(false)}>
+                      个人中心
+                    </Link>
+                  </Button>
+                  <Button variant="outline" className="w-full" onClick={() => {
+                    handleLogout()
+                    setIsOpen(false)
+                  }}>
+                    退出登录
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Button className="w-full" asChild>
+                    <Link href="/signup" onClick={() => setIsOpen(false)}>
+                      免费注册
+                    </Link>
+                  </Button>
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/login" onClick={() => setIsOpen(false)}>
+                      登录
+                    </Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
