@@ -36,5 +36,54 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Supabase
-supabase/migrations
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+
+# System files (Windows)
+NTUSER.DAT*
+ntuser.dat*
+ntuser.ini
+*.TM.blf
+*.regtrans-ms
+
+# User directories
+AppData/
+Contacts/
+Desktop/
+Documents/
+Downloads/
+Favorites/
+Links/
+Music/
+Pictures/
+Saved Games/
+Searches/
+Videos/
+OneDrive/
+WPS Cloud Files/
+WPSDrive/
+
+# Configuration files
+.claude*
+.cursor*
+.conda*
+.continuum*
+.anaconda*
+.android*
+.ssh/
+.zshrc
+.gitconfig
+.git-for-windows-updater
+.python_history
+
+# Project specific
+clean_c_drive.ps1
+deploy_to_github.bat
+vercel_deploy.bat
+GITHUB_DEPLOYMENT_GUIDE.md
+VERCEL_DEPLOYMENT_GUIDE.md
+QUICK_VERCEL_DEPLOY.md
